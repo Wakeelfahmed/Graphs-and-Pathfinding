@@ -59,13 +59,5 @@ public class ListInt  {
         while (i != size) {s += list[i];  i++;}
         return s;
     }
-
-    public ListInt reverse() {
-        ListInt reversedList = new ListInt(getCapacity());
-        for (int i = getSize() - 1; i >= 0; i--) {
-            reversedList.append(get(i));
-        }
-        return reversedList;
-    }
 }
 
