@@ -1,6 +1,7 @@
 package comp2023v2;
 
 public class NetworkUtils implements INetworkUtils {
+
     // Helper method to get adjacent stations
     private ListInt getAdjacentStations(Network network, int stationIndex) {
         ListInt adjacentStations = new ListInt(network.getNumStations());
@@ -14,14 +15,17 @@ public class NetworkUtils implements INetworkUtils {
 
     @Override
     public ListInt breadthFirstSearch(Network network, int index) {
-        ListInt result = new ListInt(network.MAX_STATIONS);
-        QueueInt queue = new QueueInt(network.MAX_STATIONS);
-        SetInt visitedSet = new SetInt(network.MAX_STATIONS);
+        ListInt result = new ListInt(network.getNumStations());
+        QueueInt queue = new QueueInt(network.getNumStations());
+        SetInt visitedSet = new SetInt(network.getNumStations());
 
         queue.addToBack(index);
 
         while (queue.getSize() != 0) {
             int currentStation = queue.removefromFront();
+
+            // Assertion: Check that the station is not visited before
+            assert !visitedSet.contains(currentStation) : "Station should not be visited twice.";
 
             if (!visitedSet.contains(currentStation)) {
                 result.append(currentStation);
@@ -30,6 +34,10 @@ public class NetworkUtils implements INetworkUtils {
                 ListInt adjacentStations = getAdjacentStations(network, currentStation);
                 for (int i = 0; i < adjacentStations.getSize(); i++) {
                     int neighbor = adjacentStations.get(i);
+
+                    // Assertion: Check that neighbors are not already visited
+                    assert !visitedSet.contains(neighbor) : "Neighbor should not be visited.";
+
                     if (!visitedSet.contains(neighbor)) {
                         queue.addToBack(neighbor);
                     }
@@ -51,6 +59,8 @@ public class NetworkUtils implements INetworkUtils {
         while (stack.getSize() != 0) {
             int currentStation = stack.pop();
 
+            // Assertion: Check that the station is not visited before
+            assert !visitedSet.contains(currentStation) : "Station should not be visited twice.";
             if (!visitedSet.contains(currentStation)) {
                 result.append(currentStation);
                 visitedSet.include(currentStation);
@@ -76,6 +86,9 @@ public class NetworkUtils implements INetworkUtils {
         double[] gValues = new double[network.getNumStations()];
         int[] previous = new int[network.getNumStations()];
 
+        // Counter for loop iterations
+        int iterations = 0;
+
         // Initialize open set, g-values, and previous
         for (int i = 0; i < network.getNumStations(); i++) {
             openSet.include(i);
@@ -87,14 +100,20 @@ public class NetworkUtils implements INetworkUtils {
         gValues[startIndex] = 0;
 
         while (!closedSet.contains(endIndex)) {
-            int x = findLowestGValueNode(openSet, gValues);
+            int x = findLowestValueNode(openSet, gValues);
             openSet.exclude(x);
             closedSet.include(x);
+
+            iterations++;  // Increment the iteration counter
 
             if (x != endIndex) {
                 ListInt adjacentNodes = getAdjacentStations(network, x);
                 for (int i = 0; i < adjacentNodes.getSize(); i++) {
                     int n = adjacentNodes.get(i);
+
+                    // Assertion: Check that the node is in openSet
+                    assert openSet.contains(n) : "Node should be in openSet.";
+
                     if (openSet.contains(n)) {
                         double gPrime = gValues[x] + network.getDistance(x, n);
                         if (gPrime < gValues[n]) {
@@ -116,11 +135,14 @@ public class NetworkUtils implements INetworkUtils {
         // Reverse the result list to get the correct order
         result = reverseList(result);
 
+        // Output the number of iterations
+        System.out.println("Number of iterations: " + iterations);
+
         return result;
     }
 
-    // Helper method to find the node with the lowest g-value
-    private int findLowestGValueNode(SetInt openSet, double[] gValues) {
+    // Helper method to find the node with the lowest g-value(Dijkstra) or f-value(A*)
+    private int findLowestValueNode(SetInt openSet, double[] gValues) {
         int lowestNode = -1;  // Initialize to an invalid node index
         double lowestValue = Double.POSITIVE_INFINITY;
 
@@ -134,7 +156,6 @@ public class NetworkUtils implements INetworkUtils {
         return lowestNode;
     }
 
-
     // Helper method to reverse a list
     private ListInt reverseList(ListInt list) {
         ListInt reversed = new ListInt(list.getCapacity());
@@ -146,20 +167,23 @@ public class NetworkUtils implements INetworkUtils {
 
     @Override
     public ListInt aStarPath(Network network, int startIndex, int endIndex) {
-        ListInt result = new ListInt(network.MAX_STATIONS);
-        SetInt closedSet = new SetInt(network.MAX_STATIONS);
-        SetInt openSet = new SetInt(network.MAX_STATIONS);
-        double[] gValues = new double[network.MAX_STATIONS];
-        double[] fValues = new double[network.MAX_STATIONS];
-        double[] straightLineDistances = new double[network.MAX_STATIONS];
-        int[] previous = new int[network.MAX_STATIONS];
+        ListInt result = new ListInt(network.getNumStations());
+        SetInt closedSet = new SetInt(network.getNumStations());
+        SetInt openSet = new SetInt(network.getNumStations());
+        double[] gValues = new double[network.getNumStations()];
+        double[] fValues = new double[network.getNumStations()];
+        double[] straightLineDistances = new double[network.getNumStations()];
+        int[] previous = new int[network.getNumStations()];
+
+        // Counter for loop iterations
+        int iterations = 0;
 
         // Initialize open set, g-values, f-values, straight-line distances, and previous
         for (int i = 0; i < network.getNumStations(); i++) {
             openSet.include(i);
             gValues[i] = Double.POSITIVE_INFINITY;
             fValues[i] = Double.POSITIVE_INFINITY;
-            straightLineDistances[i] = calculateStraightLineDistance(
+            straightLineDistances[i] = network.pythogoras(
                     network.getStationInfo(i).getxPos(),
                     network.getStationInfo(i).getyPos(),
                     network.getStationInfo(endIndex).getxPos(),
@@ -175,14 +199,20 @@ public class NetworkUtils implements INetworkUtils {
         fValues[startIndex] = gValues[startIndex] + straightLineDistances[startIndex];
 
         while (!closedSet.contains(endIndex)) {
-            int x = findLowestFValueNode(openSet, fValues);
+            int x = findLowestValueNode(openSet, fValues);
             openSet.exclude(x);
             closedSet.include(x);
+
+            iterations++;  // Increment the iteration counter
 
             if (x != endIndex) {
                 ListInt adjacentNodes = getAdjacentStations(network, x);
                 for (int i = 0; i < adjacentNodes.getSize(); i++) {
                     int n = adjacentNodes.get(i);
+
+                    // Assertion: Check that the node is in openSet
+                    assert openSet.contains(n) : "Node should be in openSet.";
+
                     if (openSet.contains(n)) {
                         double gPrime = gValues[x] + network.getDistance(x, n);
                         if (gPrime < gValues[n]) {
@@ -205,26 +235,9 @@ public class NetworkUtils implements INetworkUtils {
         // Reverse the result list to get the correct order
         result = reverseList(result);
 
+        // Output the number of iterations
+        System.out.println("Number of iterations: " + iterations);
+        
         return result;
-    }
-
-    // Helper method to calculate straight-line distance using Pythagoras
-    private double calculateStraightLineDistance(double x0, double y0, double x1, double y1) {
-        return Math.sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0));
-    }
-
-    // Helper method to find the node with the lowest f-value
-    private int findLowestFValueNode(SetInt openSet, double[] fValues) {
-        int lowestNode = -1;
-        double lowestValue = Double.POSITIVE_INFINITY;
-
-        for (int i = 0; i < fValues.length; i++) {
-            if (openSet.contains(i) && fValues[i] < lowestValue) {
-                lowestNode = i;
-                lowestValue = fValues[i];
-            }
-        }
-
-        return lowestNode;
     }
 }
